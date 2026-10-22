@@ -1,7 +1,51 @@
 import pygame
+import random
+import time
 
+#print("This is Paula testing!")
+#print("Hello world, Github test")
+
+pygame.init()
+
+#game variables
 GAME_WIDTH = 800
 GAME_HEIGHT = 600
+#5x5 puzzle (we can change later if we want)
+rows=5
+columns=5
+#pieces info
+number_pieces=rows*columns  #25 pieces total
+piece_width = GAME_WIDTH/rows
+piece_height = GAME_HEIGHT/columns
+pieces = [] #array for cells
 
-print("This is Paula testing!")
-print("Hello world, Github test")
+#screen image/background
+white = (255,255,255)
+bg=pygame.image.load('')    #loads image for puzzle
+bg_rect=bg.get.rect()   #border for puzzle
+bg_rect.toplef = (0,0)  #Position:image starts at top left
+
+#game window parts
+screen=pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
+pygame.display.set_caption("Puzzle : Four of Wands") 
+#Four of wands is a tarot card that represents a celebration when upright but reversed is conflict in love life. We can change the name
+#I just thought it would be interesting hinting.
+
+#for-loop for the puzzle pieces
+for i in range(number_pieces):
+    x=(i%rows)*piece_width  #horizontal position
+    y=(i//columns)*piece_height  #vertical position
+    indiv_piece=pygame.Rect(x,y,piece_width, piece_height)  #rectangle for the piece at those positions
+    #parts of each piece
+    pieces.append({'rect':indiv_piece , 'border':bg_rect ,'order':i ,'pos': rand_position})
+    #randomizer for the pieces
+
+#main game loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        screen.fill(white)
+        screen.blit(bg,bg_rect, ()) #gets portion of image at a given coordinate (x,y,width,height)
+pygame.quit()
