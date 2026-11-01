@@ -10,20 +10,32 @@ pygame.init()
 #game variables
 GAME_WIDTH = 800
 GAME_HEIGHT = 600
-#5x5 puzzle (we can change later if we want)
-rows=5
-columns=5
+game_over = False
+#4x4 puzzle (we can change later if we want)
+rows=4
+columns=4
 #pieces info
 number_pieces=rows*columns  #25 pieces total
-piece_width = GAME_WIDTH/rows
-piece_height = GAME_HEIGHT/columns
+piece_width = GAME_WIDTH// columns
+piece_height = GAME_HEIGHT//rows
 pieces = [] #array for cells
+rand_ind=list(range(0,number_pieces))
+rand_position=list(range(0, number_pieces)) #random index for the pieces
+#image info
+piece_choosen=None  #default start 
 
 #screen image/background
+red = (255,0,0)
 white = (255,255,255)
-bg=pygame.image.load('')    #loads image for puzzle
-bg_rect=bg.get.rect()   #border for puzzle
-bg_rect.toplef = (0,0)  #Position:image starts at top left
+bg=pygame.image.load('pompom.jpg')    #loads image for puzzle
+bg_rect=bg.get_rect()   #border for puzzle
+bg_rect.topleft = (0,0)  #Position:image starts at top left
+
+#starting screen part
+font_title = pygame.font.Font(None, 40)
+title= font_title.render('Puzzle : Four of Wands', True, (0,0,0))
+title_rect=title.get_rect()
+
 
 #game window parts
 screen=pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
@@ -36,9 +48,11 @@ for i in range(number_pieces):
     x=(i%rows)*piece_width  #horizontal position
     y=(i//columns)*piece_height  #vertical position
     indiv_piece=pygame.Rect(x,y,piece_width, piece_height)  #rectangle for the piece at those positions
-    #parts of each piece
-    pieces.append({'rect':indiv_piece , 'border':bg_rect ,'order':i ,'pos': rand_position})
     #randomizer for the pieces
+    rand_place=random.choice(rand_ind)
+    rand_ind.remove(rand_place)
+    #parts of each piece
+    pieces.append({'rect':indiv_piece , 'border':white ,'order':i ,'pos': rand_place})
 
 #main game loop
 running = True
@@ -46,6 +60,56 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        screen.fill(white)
-        screen.blit(bg,bg_rect, ()) #gets portion of image at a given coordinate (x,y,width,height)
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
+
+        #makes possible selecting the puzzle pieces with mouse clicked
+        if  event.type == pygame.MOUSEBUTTONDOWN and event.button ==1 and not game_over:
+            mouse=pygame.mouse.get_pos() #gives position of mouse cursor in grid
+
+            for piece in pieces:
+                rect=piece['rect']
+                oder=piece['order']
+
+                #if the mouse collides with an image
+                if rect.collidepoint(mouse):    
+                    #check for default
+                    if piece_choosen is None:
+                        piece_choosen=piece
+                        piece['border']=red #makes border of piece red when selected
+                    else:
+                        now_pic=piece
+                        #check if we are checking different images
+                        if now_pic['order'] != piece_choosen['order']:
+                            
+                            #piece swap part
+                            temp_pic= piece_choosen['pos']   #saves value
+                            pieces[piece_choosen['order']]['pos'] = pieces[now_pic['order']]['pos']
+                            pieces[now_pic['order']]['pos']=temp_pic
+                            piece_choosen['border']=white
+                            piece_choosen=None
+
+                        #check if all pieces in the right place/completed
+                        game_over = True
+                        for piece in pieces:
+                            #if the piece is actually not in place
+                            if piece['order'] != piece['pos']:
+                                game_over = False
+                        break
+
+
+    screen.fill(white)
+
+    if not game_over:
+        for i, val in enumerate(pieces):
+            place=pieces[i]['pos']  #get position
+            act_image=pygame.Rect(((place%columns)*piece_width), (place//columns)*piece_height, piece_width, piece_height)  #image area of the piece
+            screen.blit(bg, pieces[i]['rect'], act_image)
+            pygame.draw.rect(screen,pieces[i]['border'], pieces[i]['rect'],2)    #makes border for the pieces (more puzzle-like)
+    else:
+        screen.blit(bg, bg_rect)
+
+    pygame.display.update()
 pygame.quit()
