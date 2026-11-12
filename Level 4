@@ -2,3 +2,51 @@ import pygame
 
 GAME_WIDTH = 800
 GAME_HEIGHT = 600
+
+window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
+pygame.display.set_caption("Level 4")
+
+sprite = pygame.Rect(400, 300, 25, 25)
+base_speed = 5 
+
+# a clock to control the game's framerate
+clock = pygame.time.Clock()
+
+moving = True
+
+while moving:
+    # this tells the game to never run faster than 60 frames per second
+    clock.tick(60) 
+
+    # when the player hits x in the window the game is closed
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            moving = False
+
+    keys = pygame.key.get_pressed()
+    # define vertical and horizontal movement so diagonal movement can be defined
+    moving_vertical = keys[pygame.K_w] or keys[pygame.K_s]
+    moving_horizontal = keys[pygame.K_a] or keys[pygame.K_d]
+    moving_diagonal = moving_vertical and moving_horizontal
+    
+    # if diagonal, lower the speed slightly. if not, use base_speed
+    # this fixes the diagonal movement and makes it the same pace as walking forward and backwards
+    if moving_diagonal:
+        speed = base_speed * 0.7  # 0.7 makes diagonal movement match straight movement
+    else:
+        speed = base_speed
+    # use WASD keys to move
+    if keys[pygame.K_w] and sprite.top > 0:
+        sprite.y -= speed  
+    if keys[pygame.K_s] and sprite.bottom < GAME_HEIGHT:
+        sprite.y += speed  
+    if keys[pygame.K_a] and sprite.left > 0:
+        sprite.x -= speed
+    if keys[pygame.K_d] and sprite.right < GAME_WIDTH:
+        sprite.x += speed
+    # placeholder colors of the background and sprite for now
+    window.fill((100, 100, 100))
+    pygame.draw.rect(window, (255, 192, 203), sprite) 
+    pygame.display.flip()
+
+pygame.quit()
