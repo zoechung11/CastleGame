@@ -21,18 +21,18 @@ window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
 pygame.display.set_caption("Memory Match")
 
 # get the images
-background_image = pygame.image.load("").convert()
+background_image = pygame.image.load("background.png").convert()
 #rename to card image names
-pink_potion_image = pygame.image.load("").convert_alpha()
-purple_potion_image = pygame.image.load("").convert_alpha()
-orange_potion_image = pygame.image.load("").convert_alpha()
-fairy_image = pygame.image.load("").convert_alpha()
+knight_and_princess_image = pygame.image.load("knightandprincess.png").convert_alpha()
+locket_image = pygame.image.load("locket.png").convert_alpha()
+sword_and_crown_image = pygame.image.load("swordandcrown.png").convert_alpha()
+#fairy_image = pygame.image.load("").convert_alpha()
 
 card_images = []
 # where u store ur card images
-card_images.append()
-card_images.append()
-card_images.append()
+card_images.append(knight_and_princess_image)
+card_images.append(locket_image)
+card_images.append(sword_and_crown_image)
 
 # duplicate the images to create pairs
 card_images = card_images * 2
