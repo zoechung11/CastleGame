@@ -8,7 +8,7 @@ pygame.init()
 # game variables
 GAME_WIDTH = 800
 GAME_HEIGHT = 600
-card_size = (100,150)
+card_size = (200,307)
 white = (255,255,255)
 flip_delay = .5
 button_width = 150
@@ -65,12 +65,12 @@ def draw_timer():
     window.blit(timer_text, (GAME_WIDTH - 150, 10))
 
 def display_message(message):
-    message_text = font.render(message, True, white)
+    message_text = font.render(message, True, "#ECFFDC", (0, 0, 0))
     text_rect = message_text.get_rect(center=(GAME_WIDTH//2, GAME_HEIGHT//2))
     window.blit(message_text, text_rect)
 
 def draw_restart_button():
-    restart_button_rect = (GAME_WIDTH - button_width - 20, 20, button_width, button_height)
+    restart_button_rect = (GAME_WIDTH - button_width - 20, 100, button_width, button_height)
     pygame.draw.rect(window, white, restart_button_rect)
     restart_text = font.render("Restart", True, (0, 0, 0))
     text_rect = restart_text.get_rect(center=(restart_button_rect[0] + button_width // 2, restart_button_rect[1] + button_height // 2))
@@ -120,7 +120,7 @@ while running:
 
     # Render moves counter
     moves_text = font.render(f"Moves: {moves}", True, white)
-    window.blit(moves_text, (10, 10))
+    window.blit(moves_text, (650, 50))
 
     # Draw restart game button
     draw_restart_button()
