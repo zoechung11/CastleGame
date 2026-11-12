@@ -49,7 +49,7 @@ flipped_pairs = 0
 moves = 0
 timer_start_time = time.time()
 
-font = pygame.font.Font('carattere-regular.ttf', 28)
+font = pygame.font.Font('Quintessential-Regular.ttf', 28)
 
 def point_in_rect(point, rect):
     x, y = point
