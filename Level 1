@@ -14,7 +14,9 @@ flip_delay = .5
 button_width = 150
 button_height = 50
 timer_limit = 15
-grid_size = 4
+#grid_size = 4
+ROWS = 2
+COLS = 3
 
 # make game window
 window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
@@ -41,7 +43,7 @@ random.shuffle(card_images)
 
 # list that stores the state of each card 
 # true: face up, false means its face down
-card_states = [False] * (grid_size**2)
+card_states = [False] * (ROWS * COLS)
 
 # variables to keep track of flipped cards, pairs, moves +timet
 flipped_cards = []
@@ -86,7 +88,7 @@ while running:
                 GAME_WIDTH - button_width - 20, 20, button_width, button_height)
             if point_in_rect((mouse_x, mouse_y), restart_button_rect):
                 random.shuffle(card_images)
-                card_states = [False] * (grid_size ** 2)
+                card_states = [False] * (ROWS * COLS)
                 flipped_cards = []
                 flipped_pairs = 0
                 moves = 0
@@ -94,7 +96,7 @@ while running:
             else:
                 col = mouse_x // card_size[0]
                 row = mouse_y // card_size[1]
-                index = row * grid_size + col
+                index = row * COLS + col
                 if index < len(card_states) and not card_states[index] and len(flipped_cards) < 2:
                     card_states[index] = True
                     flipped_cards.append(index)
@@ -103,9 +105,9 @@ while running:
     window.blit(background_image, (0, 0))
 
     # Draw grid of cards
-    for i in range(grid_size):
-        for j in range(grid_size):
-            index = i * grid_size + j
+    for i in range(ROWS):
+        for j in range(COLS):
+            index = i * COLS + j
             pygame.draw.rect(window, white, (j * card_size[0],
                                              i * card_size[1], card_size[0], card_size[1]))
             if card_states[index] or index in flipped_cards:
@@ -138,7 +140,7 @@ while running:
             flipped_cards = []
 
     # Check for game over
-    if flipped_pairs == grid_size ** 2 // 2:
+    if flipped_pairs == (ROWS * COLS) // 2:
         display_message("Congratulations! You found all the pairs!")
         pygame.display.flip()
         time.sleep(2)  # Display the message for 2 seconds
