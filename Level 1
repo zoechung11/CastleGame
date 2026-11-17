@@ -23,7 +23,7 @@ window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
 pygame.display.set_caption("Memory Match")
 
 # get the images
-background_image = pygame.image.load("background.png").convert()
+background_image = pygame.image.load("MatchingGameBackground.png").convert()
 #rename to card image names
 knight_and_princess_image = pygame.image.load("knightandprincess.png").convert_alpha()
 locket_image = pygame.image.load("locket.png").convert_alpha()
