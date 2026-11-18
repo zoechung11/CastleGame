@@ -8,31 +8,33 @@ pygame.init()
 # game variables
 GAME_WIDTH = 800
 GAME_HEIGHT = 600
-card_size = (100,150)
+card_size = (200,307)
 white = (255,255,255)
 flip_delay = .5
 button_width = 150
 button_height = 50
 timer_limit = 15
-grid_size = 4
+#grid_size = 4
+ROWS = 2
+COLS = 3
 
 # make game window
 window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
 pygame.display.set_caption("Memory Match")
 
 # get the images
-background_image = pygame.image.load("").convert()
+background_image = pygame.image.load("MatchingGameBackground.png").convert()
 #rename to card image names
-pink_potion_image = pygame.image.load("").convert_alpha()
-purple_potion_image = pygame.image.load("").convert_alpha()
-orange_potion_image = pygame.image.load("").convert_alpha()
-fairy_image = pygame.image.load("").convert_alpha()
+knight_and_princess_image = pygame.image.load("knightandprincess.png").convert_alpha()
+locket_image = pygame.image.load("locket.png").convert_alpha()
+sword_and_crown_image = pygame.image.load("swordandcrown.png").convert_alpha()
+#fairy_image = pygame.image.load("").convert_alpha()
 
 card_images = []
 # where u store ur card images
-card_images.append()
-card_images.append()
-card_images.append()
+card_images.append(knight_and_princess_image)
+card_images.append(locket_image)
+card_images.append(sword_and_crown_image)
 
 # duplicate the images to create pairs
 card_images = card_images * 2
@@ -41,7 +43,7 @@ random.shuffle(card_images)
 
 # list that stores the state of each card 
 # true: face up, false means its face down
-card_states = [False] * (grid_size**2)
+card_states = [False] * (ROWS * COLS)
 
 # variables to keep track of flipped cards, pairs, moves +timet
 flipped_cards = []
@@ -49,7 +51,7 @@ flipped_pairs = 0
 moves = 0
 timer_start_time = time.time()
 
-font = pygame.font.Font('carattere-regular.ttf', 28)
+font = pygame.font.Font('Quintessential-Regular.ttf', 28)
 
 def point_in_rect(point, rect):
     x, y = point
@@ -63,12 +65,12 @@ def draw_timer():
     window.blit(timer_text, (GAME_WIDTH - 150, 10))
 
 def display_message(message):
-    message_text = font.render(message, True, white)
+    message_text = font.render(message, True, "#ECFFDC", (0, 0, 0))
     text_rect = message_text.get_rect(center=(GAME_WIDTH//2, GAME_HEIGHT//2))
     window.blit(message_text, text_rect)
 
 def draw_restart_button():
-    restart_button_rect = (GAME_WIDTH - button_width - 20, 20, button_width, button_height)
+    restart_button_rect = (GAME_WIDTH - button_width - 20, 100, button_width, button_height)
     pygame.draw.rect(window, white, restart_button_rect)
     restart_text = font.render("Restart", True, (0, 0, 0))
     text_rect = restart_text.get_rect(center=(restart_button_rect[0] + button_width // 2, restart_button_rect[1] + button_height // 2))
@@ -86,7 +88,7 @@ while running:
                 GAME_WIDTH - button_width - 20, 20, button_width, button_height)
             if point_in_rect((mouse_x, mouse_y), restart_button_rect):
                 random.shuffle(card_images)
-                card_states = [False] * (grid_size ** 2)
+                card_states = [False] * (ROWS * COLS)
                 flipped_cards = []
                 flipped_pairs = 0
                 moves = 0
@@ -94,7 +96,7 @@ while running:
             else:
                 col = mouse_x // card_size[0]
                 row = mouse_y // card_size[1]
-                index = row * grid_size + col
+                index = row * COLS + col
                 if index < len(card_states) and not card_states[index] and len(flipped_cards) < 2:
                     card_states[index] = True
                     flipped_cards.append(index)
@@ -103,9 +105,9 @@ while running:
     window.blit(background_image, (0, 0))
 
     # Draw grid of cards
-    for i in range(grid_size):
-        for j in range(grid_size):
-            index = i * grid_size + j
+    for i in range(ROWS):
+        for j in range(COLS):
+            index = i * COLS + j
             pygame.draw.rect(window, white, (j * card_size[0],
                                              i * card_size[1], card_size[0], card_size[1]))
             if card_states[index] or index in flipped_cards:
@@ -118,7 +120,7 @@ while running:
 
     # Render moves counter
     moves_text = font.render(f"Moves: {moves}", True, white)
-    window.blit(moves_text, (10, 10))
+    window.blit(moves_text, (650, 50))
 
     # Draw restart game button
     draw_restart_button()
@@ -138,7 +140,7 @@ while running:
             flipped_cards = []
 
     # Check for game over
-    if flipped_pairs == grid_size ** 2 // 2:
+    if flipped_pairs == (ROWS * COLS) // 2:
         display_message("Congratulations! You found all the pairs!")
         pygame.display.flip()
         time.sleep(2)  # Display the message for 2 seconds
