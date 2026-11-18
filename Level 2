@@ -1,4 +1,241 @@
 import pygame
+from pathlib import Path
+
+pygame.init()
 
 GAME_WIDTH = 800
 GAME_HEIGHT = 600
+TIMER_SECONDS = 60
+
+screen = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
+clock = pygame.time.Clock()
+
+# player variable + where it spawns
+img_dir = Path(__file__).resolve().parent / "img"
+def load_img(filename):
+    return pygame.image.load(img_dir / filename).convert_alpha()
+
+# path for working directory
+font_path = Path(__file__).resolve().parent / "ghost.ttf"
+font = pygame.font.Font(str(font_path), 22)
+
+# dialogue portrait
+dialogue_portrait = pygame.transform.scale(load_img("imaknight.png"), (150, 150))
+
+# player setup
+player = pygame.Rect(300, 300, 50, 50)
+player_sprite = [
+    pygame.transform.scale(load_img("knightbackward.png"), player.size),
+    pygame.transform.scale(load_img("knightforward.png"), player.size),
+    pygame.transform.scale(load_img("knightleft.png"), player.size),
+    pygame.transform.scale(load_img("knightright.png"), player.size),
+]
+player_direction = 0
+player_speed = 4
+player_spawn = player.topleft
+
+# Edit the prompt and choices here; the first choice is correct by default.
+timeout_prompt = "I’m built like a tower, stone by slow stone, A bond for two, not meant to be alone, But a single act can leave me overthrown."
+timeout_choices = ["Trust", "Loyalty"]
+correct_choice_index = 0
+intro_dialogue = "Time to do my daily tasks."
+show_intro_dialogue = True
+answer_button_rects = [
+    pygame.Rect(155, 350, 210, 55),
+    pygame.Rect(435, 350, 210, 55),
+]
+show_timeout_dialogue = False
+game_won = False
+
+# Background
+background_image = pygame.transform.scale(
+    load_img("level2mapnocollision.png"), (GAME_WIDTH, GAME_HEIGHT)
+)
+# collision variables + images
+objects = [
+    {"img": load_img("sword.png"), "rect": pygame.Rect(530, 300, 80, 50), "text": "My sword..in here? The princess would get in so much trouble."},
+    {"img": load_img("knightstand.png"), "rect": pygame.Rect(585, 250, 50, 50), "text": "Why would she keep my armor in her room?"},
+    {"img": load_img("jewlbox.png"), "rect": pygame.Rect(680, 300, 50, 50), "text": "Our locket, she's not wearing it."},
+    {"img": load_img("desk.png"), "rect": pygame.Rect(613, 267, 80, 50), "text": "To my betrothed??"},
+    {"img": load_img("rose.png"), "rect": pygame.Rect(570, 540, 50, 50), "text": "This isn't from me.."},
+    {"img": load_img("sleepbag.png"), "rect": pygame.Rect(720, 460, 50, 50), "text": "A rolled-up sleeping bag."},
+    {"img": load_img("chest.png"), "rect": pygame.Rect(720, 400, 80, 50), "text": "All of her clothes are gone."},
+    {"img": load_img("display.png"), "rect": pygame.Rect(470, 20, 80, 50), "text": "These are flags from another kingdom."},
+    {"img": load_img("dining.png"), "rect": pygame.Rect(450, 150, 80, 50), "text": "The main hall is set up for a celbration...strange"},
+    {"img": load_img("oregon.png"), "rect": pygame.Rect(225, 110, 80, 50), "text": "I haven't seen this since the prince's wedding."},
+    {"img": load_img("mop.png"), "rect": pygame.Rect(275, 160, 80, 50), "text": "What are they cleaning up for?"},
+    {"img": load_img("tomb.png"), "rect": pygame.Rect(125, 455, 80, 50), "text": "Whose.. body is in here..."},
+    {"img": load_img("altar.png"), "rect": pygame.Rect(118, 215, 80, 50), "text": "So many offerings.. I wonder who passed."},
+    {"img": load_img("armor.png"), "rect": pygame.Rect(67, 190, 80, 50), "text": "The armor of an honorable knight.. I wonder who it belonged to."},
+]
+timer_start = None
+
+def wrap_text(text, max_width):
+    lines = []
+    current_line = ""
+    for word in text.split():
+        candidate = f"{current_line} {word}".strip()
+        if font.size(candidate)[0] <= max_width:
+            current_line = candidate
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    return lines
+
+# draw dialogue box
+def draw_dialogue_box(surface, text):
+    # box dimensions 
+    box_rect = pygame.Rect(50, GAME_HEIGHT - 100, GAME_WIDTH - 100, 100)
+    pygame.draw.rect(surface, (204, 193, 153), box_rect)         
+    pygame.draw.rect(surface, (0, 0, 0), box_rect, 3)   
+    
+    # character portrait in dialogue box
+    portrait_rect = dialogue_portrait.get_rect(
+        left=box_rect.left + 5,
+        centery=box_rect.centery,
+    )
+    surface.blit(dialogue_portrait, portrait_rect)
+
+    # draw the text inside the box
+    text_surface = font.render(text, True, (0, 0, 0))
+    surface.blit(text_surface, (box_rect.x + 115, box_rect.y + 35))
+
+def draw_timeout_dialogue(surface):
+    overlay = pygame.Surface((GAME_WIDTH, GAME_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 150))
+    surface.blit(overlay, (0, 0))
+
+    panel_rect = pygame.Rect(100, 175, 600, 275)
+    pygame.draw.rect(surface, (204, 193, 153), panel_rect)
+    pygame.draw.rect(surface, (0, 0, 0), panel_rect, 3)
+
+    prompt_area = pygame.Rect(
+        panel_rect.left + 25,
+        panel_rect.top + 20,
+        panel_rect.width - 50,
+        answer_button_rects[0].top - panel_rect.top - 40,
+    )
+    prompt_lines = wrap_text(timeout_prompt, prompt_area.width)
+    line_height = font.get_linesize()
+    prompt_y = prompt_area.centery - (len(prompt_lines) - 1) * line_height // 2
+    for line_index, line in enumerate(prompt_lines):
+        prompt_surface = font.render(line, True, (0, 0, 0))
+        line_rect = prompt_surface.get_rect(
+            center=(prompt_area.centerx, prompt_y + line_index * line_height)
+        )
+        surface.blit(prompt_surface, line_rect)
+
+    for button_rect, choice in zip(answer_button_rects, timeout_choices):
+        pygame.draw.rect(surface, (230, 220, 190), button_rect)
+        pygame.draw.rect(surface, (0, 0, 0), button_rect, 2)
+        choice_surface = font.render(choice, True, (0, 0, 0))
+        surface.blit(choice_surface, choice_surface.get_rect(center=button_rect.center))
+
+# controls
+run = True
+while run:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+        elif show_intro_dialogue and event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+            show_intro_dialogue = False
+            timer_start = pygame.time.get_ticks()
+        elif event.type == pygame.MOUSEBUTTONDOWN and show_timeout_dialogue:
+            for choice_index, button_rect in enumerate(answer_button_rects):
+                if button_rect.collidepoint(event.pos):
+                    if choice_index == correct_choice_index:
+                        game_won = True
+                    else:
+                        timer_start = pygame.time.get_ticks()
+                        player.topleft = player_spawn
+                        player_direction = 0
+                    show_timeout_dialogue = False
+
+    if timer_start is None:
+        time_remaining = TIMER_SECONDS
+    else:
+        elapsed_seconds = (pygame.time.get_ticks() - timer_start) // 1000
+        time_remaining = max(0, TIMER_SECONDS - elapsed_seconds)
+    if time_remaining == 0 and timer_start is not None and not game_won:
+        show_timeout_dialogue = True
+
+    # movement controls
+    key = pygame.key.get_pressed()
+    dx = 0
+    dy = 0
+    if not show_intro_dialogue and not show_timeout_dialogue and not game_won:
+        if key[pygame.K_a]:
+            dx = -player_speed
+        elif key[pygame.K_d]:
+            dx = player_speed
+        if key[pygame.K_w]:
+            dy = -player_speed
+        elif key[pygame.K_s]:
+            dy = player_speed
+
+    if dx < 0:
+        player_direction = 2
+    elif dx > 0:
+        player_direction = 3
+    elif dy < 0:
+        player_direction = 0
+    elif dy > 0:
+        player_direction = 1
+
+    active_dialogue = None
+
+    # collision detection with movement
+    # x axis check collisions
+    player.x += dx
+    for obj in objects:
+        if player.colliderect(obj["rect"]):
+            active_dialogue = obj["text"]
+            if dx > 0:
+                player.right = obj["rect"].left
+            elif dx < 0:
+                player.left = obj["rect"].right
+
+    # y axis check for collisions
+    player.y += dy
+    for obj in objects:
+        if player.colliderect(obj["rect"]):
+            active_dialogue = obj["text"]
+            if dy > 0:
+                player.bottom = obj["rect"].top
+            elif dy < 0:
+                player.top = obj["rect"].bottom
+
+    # drawing images
+    screen.blit(background_image, (0, 0))
+    for obj in objects:
+        screen.blit(obj["img"], obj["rect"].topleft)
+    screen.blit(player_sprite[player_direction], player)
+
+    timer_text = font.render(
+        f"Time: {time_remaining // 60}:{time_remaining % 60:02}",
+        True,
+        (255, 255, 255),
+    )
+    screen.blit(timer_text, (GAME_WIDTH - timer_text.get_width() - 15, 15))
+
+    # drawing dialogue
+    if active_dialogue and not show_intro_dialogue and not show_timeout_dialogue and not game_won:
+        draw_dialogue_box(screen, active_dialogue)
+    if show_intro_dialogue:
+        draw_dialogue_box(screen, intro_dialogue)
+    elif show_timeout_dialogue:
+        draw_timeout_dialogue(screen)
+    elif game_won:
+        win_panel = pygame.Rect(250, 245, 300, 110)
+        pygame.draw.rect(screen, (204, 193, 153), win_panel)
+        pygame.draw.rect(screen, (0, 0, 0), win_panel, 3)
+        win_text = font.render("Level Complete.", True, (0, 0, 0))
+        screen.blit(win_text, win_text.get_rect(center=(GAME_WIDTH // 2, GAME_HEIGHT // 2)))
+
+    pygame.display.update()
+    clock.tick(60)
+
+pygame.quit()
