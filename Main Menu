@@ -1,0 +1,116 @@
+import pygame, sys
+
+# a clock to control the game's framerate
+princip_Clock = pygame.time.Clock()
+from pygame.locals import *
+
+pygame.init()
+#music part
+import pygame as pg
+pg.mixer.init() #initializes audio
+pg.mixer.music.load('MainMenu_BottomMusic.wav') #song: The Bottom
+pg.mixer.music.play(-1) #infinetly loops the song
+#game variables
+GAME_WIDTH = 800
+GAME_HEIGHT = 600
+window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
+background = pygame.image.load("main_menu_back.jpg") #puts background
+background = pygame.transform.scale(background, (GAME_WIDTH, GAME_HEIGHT))  #resizes background png to screen
+
+#style of menu
+pygame.display.set_caption('game base')
+font = pygame.font.Font("Jacquard12-Regular.ttf", 40)
+
+def text_writing(text, font, color, surface, x, y):
+    #makes text into image/looks better
+    text_image = font.render(text, 1, color)
+    #border around text
+    border_text = text_image.get_rect()
+    border_text.topleft = (x, y)    #puts the border in top-left screen
+    surface.blit(text_image, border_text)   #puts it on screen
+ 
+click = False
+
+#actual menu
+def main_menu():
+    global click    #use click outside function
+    while True:
+
+        #menu set-up
+        window.blit(background,(0,0))    #background
+        text_writing('main menu', font, (255, 255, 255), window, 20, 20)
+ 
+        horiz_mouse, vert_mouse = pygame.mouse.get_pos() #gets mouse position at moment
+
+        #menu buttons
+        button_1 = pygame.Rect(50, 100, 200, 50)
+        button_2 = pygame.Rect(50, 200, 200, 50)
+        #checks if pressing button1
+        if button_1.collidepoint((horiz_mouse, vert_mouse)):
+            if click:
+                game()
+        #checks if pressin button2
+        if button_2.collidepoint((horiz_mouse, vert_mouse)):
+            if click:
+                options()
+        #draws the actual buttons
+        pygame.draw.rect(window, (128, 0, 128), button_1)
+        pygame.draw.rect(window, (128, 0, 128), button_2)
+        text_writing('Play', font, (255, 255, 255), window, 115, 105)
+        text_writing('Options', font, (255, 255, 255), window, 93, 205)
+
+
+        #ensures 1 click only
+        click = False
+        for event in pygame.event.get():
+            #terminates the program
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+            if event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    click = True
+ 
+        pygame.display.update()
+        princip_Clock.tick(60)  #60 fps
+ 
+def game():
+    running = True
+    while running:
+        window.fill((0,0,0))
+        
+        text_writing('game', font, (255, 255, 255), window, 20, 20)
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    running = False
+        
+        pygame.display.update()
+        princip_Clock.tick(60) #60 fps
+ 
+def options():
+    running = True
+    while running:
+        window.fill((0,0,0))
+ 
+        text_writing('options', font, (255, 255, 255), window, 20, 20)
+        for event in pygame.event.get():
+            #terminates the program
+            if event.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    running = False
+        
+        pygame.display.update()
+        princip_Clock.tick(60) #60 fps
+ 
+main_menu()
