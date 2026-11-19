@@ -19,11 +19,11 @@ GAME_WIDTH = 800
 GAME_HEIGHT = 600
 game_over = False
 #4x4 puzzle (we can change later if we want)
-rows=4
-columns=4
+rows=5
+columns=5
 #game window parts
 screen=pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
-pygame.display.set_caption("Puzzle : Four of Wands") 
+pygame.display.set_caption("Puzzle:Level 3") 
 #Four of wands is a tarot card that represents a celebration when upright but reversed is conflict in love life. We can change the name
 #I just thought it would be interesting hinting.
 #pieces info
@@ -50,7 +50,7 @@ background = pygame.image.load('MatchingGameBackground.png')
 background = pygame.transform.scale(background, (GAME_WIDTH, GAME_HEIGHT))
 
 #puzzle image
-bg=pygame.image.load('placeholder.jpg')    #loads image for puzzle
+bg=pygame.image.load('Puzzle_Image.jpg')    #loads image for puzzle
 bg = pygame.transform.scale(bg, (GAME_WIDTH, GAME_HEIGHT))
 bg_rect=bg.get_rect()   #border for puzzle
 bg_rect.topleft = (0,0)  #Position:image starts at top left
@@ -75,7 +75,7 @@ def main_menu():
 
         #menu set-up
         screen.blit(background,(0,0))    #background
-        text_writing('Puzzle : Four of Wands', font_title, white, screen, 20, 20)
+        text_writing('Puzzle : Level 4', font_title, white, screen, 20, 20)
  
         mouse= pygame.mouse.get_pos() #gets mouse position at moment
 
@@ -194,7 +194,7 @@ def game():
         else:
             screen.blit(bg, bg_rect)
             text_writing('Level Completed!', font_diag, purple, screen, 20, 20)
-            active_dialogue = "Who...who is that man next to her...?"
+            active_dialogue = "Who...who is that next to her...?"
             if active_dialogue:
                 draw_dialogue_box(screen, active_dialogue)
 
