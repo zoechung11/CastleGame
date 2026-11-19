@@ -1,0 +1,322 @@
+import random
+import pygame
+import pytmx
+from pytmx.util_pygame import load_pygame
+
+pygame.init()
+
+GAME_WIDTH = 800
+GAME_HEIGHT = 600
+TOP_WALL_ROWS = 4
+window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
+pygame.display.set_caption("Level 4")
+
+# Load the Tiled map
+tmx_data = load_pygame("level4.tmx")
+map_width = tmx_data.width * tmx_data.tilewidth
+map_height = tmx_data.height * tmx_data.tileheight
+
+animations = {}
+for gid, props in tmx_data.tile_properties.items():
+    frames = props.get("frames")
+    if frames:
+        animations[gid] = [(tmx_data.get_tile_image_by_gid(f.gid), f.duration)
+                           for f in frames]
+
+# Walls come from the "walls" object layer in Tiled
+# Top wall: the knight can't walk up past the purple line at the top of tile
+try:
+    wall_layer = tmx_data.get_layer_by_name("walls")
+    wall_rects = [pygame.Rect(obj.x, obj.y, obj.width, obj.height) for obj in wall_layer]
+    wall_rects.append(pygame.Rect(0, 0, map_width, TOP_WALL_ROWS * tmx_data.tileheight))
+except ValueError:
+    wall_rects = []  
+
+def hits_wall(rect):
+    return any(rect.colliderect(wall) for wall in wall_rects)
+
+def feet_box():
+    return pygame.Rect(sprite.x + 20, sprite.bottom - 20, 60, 20)
+
+# Load player sprites
+forward_sprite = pygame.image.load("knightforward.png").convert_alpha()
+right_sprite = pygame.image.load("knightright.png").convert_alpha()
+backward_sprite = pygame.image.load("knightbackward.png").convert_alpha()
+left_sprite = pygame.image.load("knightleft.png").convert_alpha()
+
+# Scale size
+forward_sprite = pygame.transform.scale(forward_sprite, (100, 100))
+right_sprite = pygame.transform.scale(right_sprite, (100, 100))
+backward_sprite = pygame.transform.scale(backward_sprite, (100, 100))
+left_sprite = pygame.transform.scale(left_sprite, (100, 100))
+
+
+sprite = forward_sprite.get_rect(topleft=(400, 300))
+
+# Starting direction
+current_sprite = forward_sprite
+
+base_speed = 4
+
+ITEM_SIZE = 48
+
+
+def load_item(filename):
+    image = pygame.image.load(filename).convert_alpha()
+    # makes items around the same size
+    image = image.subsurface(image.get_bounding_rect())
+    width = image.get_width() * ITEM_SIZE // image.get_height()
+    return pygame.transform.scale(image, (width, ITEM_SIZE))
+
+
+item1_image = load_item("item.png")
+item2_image = load_item("item2.png")
+item3_image = load_item("item3.png")
+item4_image = load_item("item4.png")
+
+
+items = [
+    (pygame.Rect(400, 300, ITEM_SIZE, ITEM_SIZE), item1_image,
+     ["My helmet. I fought many battles wearing this."]),
+    (pygame.Rect(600, 200, ITEM_SIZE, ITEM_SIZE), item2_image,
+     ["My sword. I swore to defend this kingdom.",
+      "Now I'm leaving it all behind..."]),
+    (pygame.Rect(150, 450, ITEM_SIZE, ITEM_SIZE), item3_image,
+     ["My shield. Will it be enough out there?"]),
+    (pygame.Rect(650, 450, ITEM_SIZE, ITEM_SIZE), item4_image,
+     ["A picture of the two of us.",
+      "..."]),
+]
+items_collected = 0
+
+# None means there is no box on the screen
+dialogue = None
+
+state = "playing"
+glitch_start = 0
+GLITCH_TIME = 4000 
+
+
+cutscene_files = ["cutscene1.png", "cutscene2.png"]
+cutscene_number = 0  # which picture we are on right now
+cutscene_pictures = []
+for filename in cutscene_files:
+    try:
+        picture = pygame.image.load(filename).convert_alpha()
+        cutscene_pictures.append(pygame.transform.scale(picture, (GAME_WIDTH, GAME_HEIGHT)))
+    except (FileNotFoundError, pygame.error):
+        cutscene_pictures.append(None)  # not made yet
+
+font = pygame.font.SysFont("timesnewroman", 26)
+
+# A clock to control the game's framerate
+clock = pygame.time.Clock()
+
+
+def current_frame(frames, now):
+    t = now % sum(duration for _, duration in frames)
+    for image, duration in frames:
+        if t < duration:
+            return image
+        t -= duration
+
+
+def draw_map(surface, cam_x, cam_y):
+    now = pygame.time.get_ticks()
+    for layer in tmx_data.visible_layers:
+        if isinstance(layer, pytmx.TiledTileLayer):
+            for x, y, gid in layer.iter_data():
+                if gid == 0:
+                    continue
+                if gid in animations:
+                    image = current_frame(animations[gid], now)
+                else:
+                    image = tmx_data.get_tile_image_by_gid(gid)
+                surface.blit(image, (x * tmx_data.tilewidth - cam_x,
+                                     y * tmx_data.tileheight - cam_y))
+
+
+def glitch_slices(surface, how_many):
+    # Slide strips of the screen sideways, like a broken TV
+    for i in range(how_many):
+        y = random.randint(0, GAME_HEIGHT - 40)
+        strip_height = random.randint(5, 40)
+        strip = surface.subsurface((0, y, GAME_WIDTH, strip_height)).copy()
+        surface.blit(strip, (random.randint(-60, 60), y))
+
+
+def glitch_colors(surface, shift):
+    # Split the red and blue apart so the edges of things get colored fringes
+    red = surface.copy()
+    red.fill((255, 0, 0), special_flags=pygame.BLEND_MULT)
+    blue = surface.copy()
+    blue.fill((0, 0, 255), special_flags=pygame.BLEND_MULT)
+    surface.blit(red, (-shift, 0), special_flags=pygame.BLEND_ADD)
+    surface.blit(blue, (shift, 0), special_flags=pygame.BLEND_ADD)
+
+
+def glitch_static(surface, chance):
+    # Grey lines flicker across the screen like TV static
+    for y in range(0, GAME_HEIGHT, 6):
+        if random.random() < chance:
+            grey = random.randint(80, 220)
+            pygame.draw.line(surface, (grey, grey, grey), (0, y), (GAME_WIDTH, y))
+
+
+# Camera starts at 0, 0 so the click code has a position on the first frame
+cam_x = 0
+cam_y = 0
+
+moving = True
+
+while moving:
+    clock.tick(60)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            moving = False
+
+        # Press E to collect the item the knight is standing next to
+        # (or to close the dialogue box if it is open)
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+            if state == "cutscene":
+                # go to the next cutscene picture
+                cutscene_number += 1
+                if cutscene_number >= len(cutscene_files):
+                    moving = False  # the cutscene is over. Change this when there's a next scene!
+            elif state == "playing":
+                if dialogue is not None:
+                    dialogue = None
+                    if len(items) == 0:
+                        # that was the last item, so the glitch starts
+                        state = "glitch"
+                        glitch_start = pygame.time.get_ticks()
+                else:
+                    for item, image, text in items:
+                        if sprite.inflate(120, 120).colliderect(item):
+                            items.remove((item, image, text))
+                            items_collected += 1
+                            dialogue = text
+                            break
+
+    keys = pygame.key.get_pressed()
+
+    # Define vertical and horizontal movement
+    moving_vertical = keys[pygame.K_w] or keys[pygame.K_s]
+    moving_horizontal = keys[pygame.K_a] or keys[pygame.K_d]
+    moving_diagonal = moving_vertical and moving_horizontal
+
+    if moving_diagonal:
+        speed = base_speed * 0.7
+    else:
+        speed = base_speed
+
+    # Use WASD keys to move
+    dx = 0
+    dy = 0
+    if keys[pygame.K_w]:
+        dy -= speed
+    if keys[pygame.K_s]:
+        dy += speed
+    if keys[pygame.K_a]:
+        dx -= speed
+    if keys[pygame.K_d]:
+        dx += speed
+
+    # The knight stands still while the dialogue box is open or the glitch is happening
+    if dialogue is not None or state != "playing":
+        dx = 0
+        dy = 0
+
+    sprite.x += dx
+    if hits_wall(feet_box()) or sprite.left < 0 or sprite.right > map_width:
+        sprite.x -= dx
+
+    sprite.y += dy
+    if hits_wall(feet_box()) or sprite.top < 0 or sprite.bottom > map_height:
+        sprite.y -= dy
+
+    # Change sprite depending on direction
+    if keys[pygame.K_w]:
+        current_sprite = backward_sprite
+    elif keys[pygame.K_s]:
+        current_sprite = forward_sprite
+    elif keys[pygame.K_d]:
+        current_sprite = right_sprite
+    elif keys[pygame.K_a]:
+        current_sprite = left_sprite
+
+    # Camera follows the player, clamped to the map edges
+    cam_x = sprite.centerx - GAME_WIDTH // 2
+    cam_y = sprite.centery - GAME_HEIGHT // 2
+    cam_x = max(0, min(cam_x, map_width - GAME_WIDTH))
+    cam_y = max(0, min(cam_y, map_height - GAME_HEIGHT))
+
+    # Draw map
+    window.fill((100, 100, 100))
+    draw_map(window, cam_x, cam_y)
+
+    # Draw items that are still on the floor
+    for item, image, text in items:
+        window.blit(image, (item.x - cam_x, item.y - cam_y))
+
+    # Draw player sprite relative to the camera
+    window.blit(current_sprite, (sprite.x - cam_x, sprite.y - cam_y))
+    
+    # Show "Collect?" above the first item the knight is close to
+    nearby = None
+    for item, image, text in items:
+        if sprite.inflate(120, 120).colliderect(item):
+            nearby = item
+            break
+    if nearby is not None and dialogue is None:
+        prompt = font.render("Collect? (E)", True, (255, 255, 255))
+        prompt_x = nearby.centerx - cam_x - prompt.get_width() // 2
+        prompt_y = nearby.y - cam_y - 30
+        window.blit(prompt, (prompt_x, prompt_y))
+
+    # Draw the counter at the top left of the screen
+    hud_text = font.render(f"Items left: {len(items)}    Collected: {items_collected}",
+                           True, (255, 255, 255))
+    window.blit(hud_text, (10, 10))
+
+    # Dialogue box at the bottom of the screen
+    if dialogue is not None:
+        pygame.draw.rect(window, (20, 10, 40), (40, 470, 720, 110))
+        pygame.draw.rect(window, (255, 255, 255), (40, 470, 720, 110), 3)
+        line_y = 488
+        for line in dialogue:
+            line_picture = font.render(line, True, (255, 255, 255))
+            window.blit(line_picture, (60, line_y))
+            line_y += 34
+        hint = font.render("Press E to continue", True, (160, 160, 160))
+        window.blit(hint, (60, 546))
+
+    # The glitch: starts small, then gets worse and worse until the cutscene
+    if state == "glitch":
+        progress = (pygame.time.get_ticks() - glitch_start) / GLITCH_TIME  # 0.0 up to 1.0
+        if random.random() < progress + 0.2:
+            glitch_slices(window, 1 + int(progress * 10))
+        if random.random() < progress:
+            glitch_colors(window, 2 + int(progress * 14))
+            glitch_static(window, progress * 0.5)
+        if progress >= 1:
+            state = "cutscene"
+
+    # Cutscene placeholder
+    if state == "cutscene" and cutscene_number < len(cutscene_pictures):
+        window.fill((0, 0, 0))
+        picture = cutscene_pictures[cutscene_number]
+        if picture is not None:
+            window.blit(picture, (0, 0))
+        else:
+            # placeholder until the real picture is made
+            words = font.render("CUTSCENE GOES HERE", True, (255, 255, 255))
+            window.blit(words, (GAME_WIDTH // 2 - words.get_width() // 2, 250))
+            name = font.render(cutscene_files[cutscene_number], True, (160, 160, 160))
+            window.blit(name, (GAME_WIDTH // 2 - name.get_width() // 2, 290))
+        hint = font.render("Press E to continue", True, (160, 160, 160))
+        window.blit(hint, (GAME_WIDTH // 2 - hint.get_width() // 2, 550))
+
+    pygame.display.flip()
+
+pygame.quit()
